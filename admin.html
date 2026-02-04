@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Investment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #f8961e;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .admin-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .admin-sidebar {
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .admin-header {
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            padding: 15px 20px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white !important;
+            border-left: 4px solid var(--success);
+        }
+        
+        .nav-link i {
+            width: 25px;
+            text-align: center;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .pending-badge {
+            background: linear-gradient(45deg, #ff9a00, #ff5e00);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .approved-badge {
+            background: linear-gradient(45deg, #00b09b, #96c93d);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .rejected-badge {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .request-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s;
+        }
+        
+        .request-card:hover {
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+            transform: translateX(5px);
+        }
+        
+        .user-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            border-top: 3px solid var(--primary);
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-approve {
+            background: linear-gradient(45deg, #00b09b, #96c93d);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .btn-reject {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .btn-view {
+            background: linear-gradient(45deg, #2193b0, #6dd5ed);
+            border: none;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                min-height: auto;
+                border-radius: 20px 20px 0 0;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div id="loading" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; justify-content: center; align-items: center; z-index: 9999;">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <div class="row admin-container">
+            <!-- Sidebar -->
+            <div class="col-lg-3 col-xl-2 admin-sidebar p-0">
+                <div class="p-4 text-center">
+                    <h4 class="mb-0"><i class="bi bi-shield-check"></i> Admin Panel</h4>
+                    <small class="text-light">Investment Platform</small>
+                </div>
+                
+                <ul class="nav flex-column nav-pills">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="withdraw-tab">
+                            <i class="bi bi-cash-stack"></i> Withdraw Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="user-tab">
+                            <i class="bi bi-people"></i> User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="admin-dashboard.html">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mt-4">
+                        <a class="nav-link text-danger" href="#" id="logout-btn">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9 col-xl-10 p-0">
+                <!-- Header -->
+                <div class="admin-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h3 class="mb-0" id="page-title">Withdraw Management</h3>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <span class="badge bg-light text-dark p-2">
+                                <i class="bi bi-person-circle"></i> 
+                                <span id="admin-email">Loading...</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="p-4">
+                    <!-- Stats Cards -->
+                    <div class="row" id="stats-section">
+                        <div class="col-md-3 col-sm-6">
+                            <div class="stats-card">
+                                <div class="stats-icon" style="background: linear-gradient(45deg, #667eea, #764ba2);">
+                                    <i class="bi bi-clock text-white"></i>
+                                </div>
+                                <h5 class="text-muted">Pending</h5>
+                                <h2 id="pending-count">0</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="stats-card">
+                                <div class="stats-icon" style="background: linear-gradient(45deg, #00b09b, #96c93d);">
+                                    <i class="bi bi-check-circle text-white"></i>
+                                </div>
+                                <h5 class="text-muted">Approved</h5>
+                                <h2 id="approved-count">0</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="stats-card">
+                                <div class="stats-icon" style="background: linear-gradient(45deg, #ff416c, #ff4b2b);">
+                                    <i class="bi bi-x-circle text-white"></i>
+                                </div>
+                                <h5 class="text-muted">Rejected</h5>
+                                <h2 id="rejected-count">0</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6">
+                            <div class="stats-card">
+                                <div class="stats-icon" style="background: linear-gradient(45deg, #2193b0, #6dd5ed);">
+                                    <i class="bi bi-cash text-white"></i>
+                                </div>
+                                <h5 class="text-muted">Total Amount</h5>
+                                <h2 id="total-amount">৳0</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Requests Section -->
+                    <div class="row" id="withdraw-section">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4><i class="bi bi-hourglass-split text-warning"></i> Pending Requests</h4>
+                                <span class="pending-badge" id="pending-badge">0 Requests</span>
+                            </div>
+                            
+                            <!-- Last Request (Highlighted) -->
+                            <div class="alert alert-warning" id="last-request-alert" style="display: none;">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6><i class="bi bi-exclamation-triangle"></i> Latest Withdraw Request</h6>
+                                        <p class="mb-1" id="last-request-details">Loading...</p>
+                                        <small class="text-muted" id="last-request-time"></small>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <button class="btn btn-sm btn-primary" onclick="viewAllPending()">
+                                            <i class="bi bi-eye"></i> View All Pending
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Pending Requests List -->
+                            <div id="pending-requests-list">
+                                <!-- Requests will load here -->
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Loading pending requests...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Management Section (Hidden by default) -->
+                    <div class="row" id="user-section" style="display: none;">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4><i class="bi bi-people text-primary"></i> All Users</h4>
+                                <div class="input-group" style="max-width: 300px;">
+                                    <input type="text" class="form-control" placeholder="Search users..." id="user-search">
+                                    <button class="btn btn-outline-primary" type="button" id="search-btn">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Users List -->
+                            <div id="users-list">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Loading users...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View User Modal -->
+    <div class="modal fade" id="viewUserModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">User Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">User ID</label>
+                                <p class="form-control-plaintext fw-bold" id="modal-user-id">N/A</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Email</label>
+                                <p class="form-control-plaintext fw-bold" id="modal-email">N/A</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Phone</label>
+                                <p class="form-control-plaintext fw-bold" id="modal-phone">N/A</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Current Balance</label>
+                                <h3 class="text-success" id="modal-balance">৳0</h3>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Total Referrals</label>
+                                <p class="form-control-plaintext fw-bold" id="modal-referrals">0</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Join Date</label>
+                                <p class="form-control-plaintext fw-bold" id="modal-join-date">N/A</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3">Withdraw History</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdraw-history-table">
+                                <!-- History will load here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js"></script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.getAuth(app);
+        const db = firebase.getFirestore(app);
+
+        // DOM Elements
+        const loadingElement = document.getElementById('loading');
+        const pageTitle = document.getElementById('page-title');
+        const adminEmail = document.getElementById('admin-email');
+        const withdrawSection = document.getElementById('withdraw-section');
+        const userSection = document.getElementById('user-section');
+        const withdrawTab = document.getElementById('withdraw-tab');
+        const userTab = document.getElementById('user-tab');
+        
+        // Stats Elements
+        const pendingCount = document.getElementById('pending-count');
+        const approvedCount = document.getElementById('approved-count');
+        const rejectedCount = document.getElementById('rejected-count');
+        const totalAmount = document.getElementById('total-amount');
+        const pendingBadge = document.getElementById('pending-badge');
+        
+        // Request Elements
+        const lastRequestAlert = document.getElementById('last-request-alert');
+        const lastRequestDetails = document.getElementById('last-request-details');
+        const lastRequestTime = document.getElementById('last-request-time');
+        const pendingRequestsList = document.getElementById('pending-requests-list');
+        const usersList = document.getElementById('users-list');
+        const userSearch = document.getElementById('user-search');
+
+        // Modal Elements
+        const viewUserModal = new bootstrap.Modal(document.getElementById('viewUserModal'));
+        const modalUserId = document.getElementById('modal-user-id');
+        const modalEmail = document.getElementById('modal-email');
+        const modalPhone = document.getElementById('modal-phone');
+        const modalBalance = document.getElementById('modal-balance');
+        const modalReferrals = document.getElementById('modal-referrals');
+        const modalJoinDate = document.getElementById('modal-join-date');
+        const withdrawHistoryTable = document.getElementById('withdraw-history-table');
+
+        // Global Variables
+        let currentUser = null;
+        let allWithdrawRequests = [];
+        let allUsers = [];
+
+        // Check Authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                adminEmail.textContent = user.email;
+                
+                // Check if user is admin
+                const isAdmin = await checkAdminStatus(user.uid);
+                if (!isAdmin) {
+                    alert('Access denied! Admin only.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                loadingElement.style.display = 'none';
+                loadDashboardData();
+                setupRealtimeListeners();
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Check if user is admin
+        async function checkAdminStatus(uid) {
+            try {
+                const adminDoc = await firebase.getDoc(firebase.doc(db, 'admins', uid));
+                return adminDoc.exists();
+            } catch (error) {
+                console.error('Admin check error:', error);
+                return false;
+            }
+        }
+
+        // Setup realtime listeners
+        function setupRealtimeListeners() {
+            // Listen for withdraw requests changes
+            const withdrawRef = firebase.collection(db, 'withdrawRequests');
+            const unsubscribeWithdraw = firebase.onSnapshot(withdrawRef, (snapshot) => {
+                allWithdrawRequests = [];
+                snapshot.forEach(doc => {
+                    allWithdrawRequests.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                updateWithdrawStats();
+                loadPendingRequests();
+            });
+
+            // Listen for users changes
+            const usersRef = firebase.collection(db, 'users');
+            const unsubscribeUsers = firebase.onSnapshot(usersRef, (snapshot) => {
+                allUsers = [];
+                snapshot.forEach(doc => {
+                    allUsers.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                if (userSection.style.display !== 'none') {
+                    loadUsers();
+                }
+            });
+        }
+
+        // Update withdraw statistics
+        function updateWithdrawStats() {
+            const pending = allWithdrawRequests.filter(req => req.status === 'pending');
+            const approved = allWithdrawRequests.filter(req => req.status === 'approved');
+            const rejected = allWithdrawRequests.filter(req => req.status === 'rejected');
+            
+            pendingCount.textContent = pending.length;
+            approvedCount.textContent = approved.length;
+            rejectedCount.textContent = rejected.length;
+            pendingBadge.textContent = `${pending.length} Requests`;
+            
+            // Calculate total amount
+            const total = allWithdrawRequests.reduce((sum, req) => sum + (req.amount || 0), 0);
+            totalAmount.textContent = `৳${total.toLocaleString()}`;
+            
+            // Show last request
+            if (pending.length > 0) {
+                const lastRequest = pending[pending.length - 1];
+                lastRequestAlert.style.display = 'block';
+                lastRequestDetails.textContent = `${lastRequest.uid} requested ৳${lastRequest.amount} via ${lastRequest.method}`;
+                
+                if (lastRequest.createdAt) {
+                    const date = lastRequest.createdAt.toDate();
+                    lastRequestTime.textContent = date.toLocaleString();
+                }
+            } else {
+                lastRequestAlert.style.display = 'none';
+            }
+        }
+
+        // Load pending withdraw requests
+        function loadPendingRequests() {
+            const pendingRequests = allWithdrawRequests.filter(req => req.status === 'pending');
+            
+            if (pendingRequests.length === 0) {
+                pendingRequestsList.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle text-success" style="font-size: 48px;"></i>
+                        <h5 class="mt-3 text-muted">No Pending Requests</h5>
+                        <p>All withdraw requests have been processed.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            pendingRequests.forEach(request => {
+                const date = request.createdAt ? request.createdAt.toDate().toLocaleString() : 'N/A';
+                
+                html += `
+                    <div class="request-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h6 class="mb-1">${request.uid || 'N/A'}</h6>
+                                <small class="text-muted">User ID</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h5 class="text-primary mb-1">৳${request.amount || 0}</h5>
+                                <small class="text-muted">Amount</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">${request.method || 'N/A'}</p>
+                                <small class="text-muted">Method</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">${request.phone || 'N/A'}</p>
+                                <small class="text-muted">Phone</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="action-buttons">
+                                    <button class="btn btn-approve" onclick="approveRequest('${request.id}')">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                    <button class="btn btn-reject" onclick="rejectRequest('${request.id}')">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                    <button class="btn btn-view" onclick="viewUserDetails('${request.uid}')">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> Requested: ${date}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            pendingRequestsList.innerHTML = html;
+        }
+
+        // View all pending requests
+        function viewAllPending() {
+            // Already showing all pending in the main list
+        }
+
+        // Approve withdraw request
+        async function approveRequest(requestId) {
+            if (!confirm('Are you sure you want to APPROVE this withdraw request?')) {
+                return;
+            }
+            
+            try {
+                // Update request status
+                await firebase.updateDoc(firebase.doc(db, 'withdrawRequests', requestId), {
+                    status: 'approved',
+                    updatedAt: firebase.serverTimestamp()
+                });
+                
+                alert('Request approved successfully!');
+            } catch (error) {
+                console.error('Approve error:', error);
+                alert('Error approving request: ' + error.message);
+            }
+        }
+
+        // Reject withdraw request
+        async function rejectRequest(requestId) {
+            if (!confirm('Are you sure you want to REJECT this withdraw request?')) {
+                return;
+            }
+            
+            try {
+                const request = allWithdrawRequests.find(req => req.id === requestId);
+                if (!request) {
+                    alert('Request not found!');
+                    return;
+                }
+                
+                // Update request status
+                await firebase.updateDoc(firebase.doc(db, 'withdrawRequests', requestId), {
+                    status: 'rejected',
+                    updatedAt: firebase.serverTimestamp()
+                });
+                
+                // Get user document
+                const userDoc = await firebase.getDoc(firebase.doc(db, 'users', request.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const currentBalance = userData.balance || 0;
+                    
+                    // Increment user balance
+                    await firebase.updateDoc(firebase.doc(db, 'users', request.uid), {
+                        balance: currentBalance + (request.amount || 0),
+                        updatedAt: firebase.serverTimestamp()
+                    });
+                }
+                
+                alert('Request rejected and amount returned to user balance!');
+            } catch (error) {
+                console.error('Reject error:', error);
+                alert('Error rejecting request: ' + error.message);
+            }
+        }
+
+        // View user details
+        async function viewUserDetails(userId) {
+            try {
+                // Get user data
+                const userDoc = await firebase.getDoc(firebase.doc(db, 'users', userId));
+                if (!userDoc.exists()) {
+                    alert('User not found!');
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                
+                // Populate modal
+                modalUserId.textContent = userId;
+                modalEmail.textContent = userData.email || 'N/A';
+                modalPhone.textContent = userData.phone || 'N/A';
+                modalBalance.textContent = `৳${(userData.balance || 0).toLocaleString()}`;
+                modalReferrals.textContent = userData.totalReferrals || 0;
+                
+                if (userData.createdAt) {
+                    modalJoinDate.textContent = userData.createdAt.toDate().toLocaleDateString();
+                } else {
+                    modalJoinDate.textContent = 'N/A';
+                }
+                
+                // Load withdraw history (only pending status)
+                const userWithdrawals = allWithdrawRequests.filter(req => 
+                    req.uid === userId && req.status === 'pending'
+                );
+                
+                if (userWithdrawals.length === 0) {
+                    withdrawHistoryTable.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                No pending withdraw requests
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    let historyHtml = '';
+                    userWithdrawals.forEach(req => {
+                        const date = req.createdAt ? req.createdAt.toDate().toLocaleString() : 'N/A';
+                        const statusBadge = req.status === 'pending' ? 
+                            '<span class="badge bg-warning">Pending</span>' : 
+                            req.status === 'approved' ? 
+                            '<span class="badge bg-success">Approved</span>' : 
+                            '<span class="badge bg-danger">Rejected</span>';
+                        
+                        historyHtml += `
+                            <tr>
+                                <td>৳${req.amount || 0}</td>
+                                <td>${req.method || 'N/A'}</td>
+                                <td>${statusBadge}</td>
+                                <td>${date}</td>
+                            </tr>
+                        `;
+                    });
+                    withdrawHistoryTable.innerHTML = historyHtml;
+                }
+                
+                // Show modal
+                viewUserModal.show();
+            } catch (error) {
+                console.error('View user error:', error);
+                alert('Error loading user details: ' + error.message);
+            }
+        }
+
+        // Load users for user management
+        function loadUsers(searchTerm = '') {
+            let filteredUsers = allUsers;
+            
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filteredUsers = allUsers.filter(user => 
+                    (user.email && user.email.toLowerCase().includes(term)) ||
+                    (user.phone && user.phone.includes(term)) ||
+                    (user.referralCode && user.referralCode.toLowerCase().includes(term)) ||
+                    user.id.toLowerCase().includes(term)
+                );
+            }
+            
+            if (filteredUsers.length === 0) {
+                usersList.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-people text-muted" style="font-size: 48px;"></i>
+                        <h5 class="mt-3 text-muted">No Users Found</h5>
+                        <p>${searchTerm ? 'Try a different search term' : 'No users in the system yet'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredUsers.forEach(user => {
+                const pendingRequests = allWithdrawRequests.filter(req => 
+                    req.uid === user.id && req.status === 'pending'
+                ).length;
+                
+                html += `
+                    <div class="user-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h6 class="mb-1">${user.email || 'N/A'}</h6>
+                                <small class="text-muted">${user.id}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">${user.phone || 'N/A'}</p>
+                                <small class="text-muted">Phone</small>
+                            </div>
+                            <div class="col-md-2">
+                                <h6 class="text-success mb-1">৳${(user.balance || 0).toLocaleString()}</h6>
+                                <small class="text-muted">Balance</small>
+                            </div>
+                            <div class="col-md-2">
+                                <p class="mb-1">${user.totalReferrals || 0}</p>
+                                <small class="text-muted">Referrals</small>
+                            </div>
+                            <div class="col-md-1">
+                                <span class="pending-badge">${pendingRequests}</span>
+                                <small class="text-muted d-block">Pending</small>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-view" onclick="viewUserDetails('${user.id}')">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            usersList.innerHTML = html;
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                // Load withdraw requests
+                const withdrawSnapshot = await firebase.getDocs(firebase.collection(db, 'withdrawRequests'));
+                allWithdrawRequests = [];
+                withdrawSnapshot.forEach(doc => {
+                    allWithdrawRequests.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Load users
+                const usersSnapshot = await firebase.getDocs(firebase.collection(db, 'users'));
+                allUsers = [];
+                usersSnapshot.forEach(doc => {
+                    allUsers.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                updateWithdrawStats();
+                loadPendingRequests();
+            } catch (error) {
+                console.error('Load data error:', error);
+                alert('Error loading dashboard data');
+            }
+        }
+
+        // Tab Switching
+        withdrawTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            pageTitle.textContent = 'Withdraw Management';
+            withdrawSection.style.display = 'block';
+            userSection.style.display = 'none';
+            withdrawTab.classList.add('active');
+            userTab.classList.remove('active');
+            loadPendingRequests();
+        });
+
+        userTab.addEventListener('click', (e) => {
+            e.preventDefault();
+            pageTitle.textContent = 'User Management';
+            withdrawSection.style.display = 'none';
+            userSection.style.display = 'block';
+            userTab.classList.add('active');
+            withdrawTab.classList.remove('active');
+            loadUsers();
+        });
+
+        // User search
+        userSearch.addEventListener('input', (e) => {
+            loadUsers(e.target.value);
+        });
+
+        document.getElementById('search-btn').addEventListener('click', () => {
+            loadUsers(userSearch.value);
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                auth.signOut().then(() => {
+                    window.location.href = 'login.html';
+                });
+            }
+        });
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            if (withdrawSection.style.display !== 'none') {
+                loadPendingRequests();
+            }
+        }, 30000);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl + 1 for withdraw
+            if (e.ctrlKey && e.key === '1') {
+                e.preventDefault();
+                withdrawTab.click();
+            }
+            // Ctrl + 2 for users
+            if (e.ctrlKey && e.key === '2') {
+                e.preventDefault();
+                userTab.click();
+            }
+            // Escape to close modal
+            if (e.key === 'Escape') {
+                viewUserModal.hide();
+            }
+        });
+    </script>
+</body>
+</html>

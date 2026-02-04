@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel - Withdraw Management</title>
+<style>
+body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+h1 { color: #10b981; }
+
+/* Tabs */
+.tabs { display: flex; gap: 10px; margin: 20px 0; }
+.tab-btn { padding: 12px 24px; background: #ddd; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; }
+.tab-btn.active { background: #10b981; color: white; }
+
+/* Tab Content */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Stats */
+.stats-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+.stat-card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
+.stat-value { font-size: 24px; font-weight: bold; margin: 5px 0; }
+.pending { color: #f59e0b; }
+.approved { color: #10b981; }
+.rejected { color: #ef4444; }
+.total { color: #3b82f6; }
+
+/* Filters */
+.filters { background: white; padding: 20px; border-radius: 10px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+.filter-group { display: flex; align-items: center; gap: 10px; }
+.filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; }
+
+/* Withdraw Table */
+.withdraw-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.withdraw-table th { background: #3b82f6; color: white; padding: 15px; text-align: left; }
+.withdraw-table td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+.withdraw-table tr:hover { background: #f9f9f9; }
+
+/* Status Badges */
+.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-approved { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+.status-refunded { background: #dbeafe; color: #1e40af; }
+
+/* Action Buttons */
+.btn { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; }
+.btn-approve { background: #10b981; color: white; }
+.btn-reject { background: #ef4444; color: white; }
+.btn-view { background: #3b82f6; color: white; }
+.btn-refund { background: #8b5cf6; color: white; }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+.modal-content { background: white; margin: 50px auto; padding: 30px; border-radius: 10px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-body { margin: 20px 0; }
+
+/* Notification */
+.notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 5px; color: white; z-index: 2000; }
+.success { background: #10b981; }
+.error { background: #ef4444; }
+.warning { background: #f59e0b; }
+.info { background: #3b82f6; }
+
+/* Pending Indicator */
+.p-indicator { 
+    display: inline-block; 
+    width: 20px; 
+    height: 20px; 
+    background: #f59e0b; 
+    color: white; 
+    border-radius: 50%; 
+    font-size: 12px; 
+    text-align: center; 
+    line-height: 20px; 
+    margin-right: 5px; 
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h1>🔧 Admin Panel - Withdraw Management</h1>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="showTab('withdrawals')">💰 Withdrawals</button>
+    <button class="tab-btn" onclick="showTab('users')">👥 Users</button>
+    <button class="tab-btn" onclick="showTab('deposits')">💳 Deposits</button>
+</div>
+
+<!-- Withdrawals Tab -->
+<div id="withdrawals-tab" class="tab-content active">
+    
+    <!-- Statistics -->
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-value total" id="totalWithdrawals">0</div>
+            <div>Total Withdrawals</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value pending" id="pendingWithdrawals">0</div>
+            <div>Pending <span class="p-indicator">p</span></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value approved" id="approvedWithdrawals">0</div>
+            <div>Approved</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value rejected" id="rejectedWithdrawals">0</div>
+            <div>Rejected</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-group">
+            <label>Status:</label>
+            <select id="statusFilter" onchange="filterWithdrawals()">
+                <option value="all">All Status</option>
+                <option value="pending">Pending <span class="p-indicator">p</span></option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="refunded">Refunded</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Method:</label>
+            <select id="methodFilter" onchange="filterWithdrawals()">
+                <option value="all">All Methods</option>
+                <option value="bkash">Bkash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+                <option value="bank">Bank</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Date From:</label>
+            <input type="date" id="dateFrom" onchange="filterWithdrawals()">
+        </div>
+        
+        <div class="filter-group">
+            <label>Date To:</label>
+            <input type="date" id="dateTo" onchange="filterWithdrawals()">
+        </div>
+        
+        <button class="btn" onclick="resetFilters()" style="background:#6b7280;color:white;">Reset Filters</button>
+        <button class="btn" onclick="refreshWithdrawals()" style="background:#10b981;color:white;">🔄 Refresh</button>
+        <button class="btn" onclick="cleanupDuplicateWithdrawals()" style="background:#f59e0b;color:white;">🧹 Clean Duplicates</button>
+    </div>
+
+    <!-- Withdraw Table -->
+    <div style="overflow-x: auto;">
+        <table class="withdraw-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Phone</th>
+                    <th>Method</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Source</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="withdrawTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:40px;">Loading withdrawals...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Users Tab -->
+<div id="users-tab" class="tab-content">
+    <div style="text-align: center; padding: 100px 20px;">
+        <h2 style="color: #3b82f6; margin-bottom: 20px;">User Management Panel</h2>
+        <p style="color: #666; margin-bottom: 30px;">
+            Full user management features are available in the main admin dashboard
+        </p>
+        
+        <button onclick="window.open('admin-dashboard2.html', '_blank')"
+                style="background: #3b82f6; color: white; padding: 12px 24px; 
+                       border: none; border-radius: 8px; font-size: 16px; 
+                       cursor: pointer; margin: 10px;">
+            🔧 User list
+        </button>
+        
+        <br>
+        
+        <a href="admin-dashboard2.html" target="_blank" 
+           style="color: #10b981; text-decoration: none; font-weight: bold;">
+            Or click here to open in new tab →
+        </a>
+    </div>
+</div>
+
+<!-- Deposit Tab -->
+<div id="deposits-tab" class="tab-content">
+    <div style="text-align: center; padding: 100px 20px;">
+        <h2 style="color: #3b82f6; margin-bottom: 20px;">Deposit Management Panel</h2>
+        <p style="color: #666; margin-bottom: 30px;">
+            Deposit management features coming soon
+        </p>
+    </div>
+</div>
+
+<!-- Withdraw Details Modal -->
+<div id="withdrawModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle">Withdraw Details</h2>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:24px;cursor:pointer;">×</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Notification Container -->
+<div id="notificationContainer"></div>
+
+<script type="module">
+import { auth, db } from './firebase.js';
+import { 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
+import { 
+    collection, 
+    query, 
+    where, 
+    getDocs, 
+    doc, 
+    updateDoc, 
+    getDoc,
+    orderBy,
+    onSnapshot,
+    Timestamp,
+    writeBatch,
+    increment
+} from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+let currentUser = null;
+let allWithdrawals = [];
+let pendingWithdrawalsFromHistory = [];
+let currentFilters = {
+    status: 'all',
+    method: 'all',
+    dateFrom: null,
+    dateTo: null
+};
+
+// Show notification
+function showNotification(message, type = 'success') {
+    const container = document.getElementById('notificationContainer');
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Protect Admin Page
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        showNotification("Please login first!", 'error');
+        setTimeout(() => window.location.href = "index.html", 1500);
+        return;
+    }
+    
+    currentUser = user;
+    
+    try {
+        // Check if user is admin
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        
+        if (!adminDoc.exists()) {
+            showNotification("❌ You are not an admin!", 'error');
+            setTimeout(() => window.location.href = "dashboard.html", 1500);
+            return;
+        }
+        
+        showNotification("✅ Admin access granted!", 'success');
+        
+        // Load withdrawals
+        await loadAllWithdrawals();
+        await loadPendingFromUserHistory();
+        setupRealtimeListeners();
+        
+    } catch (error) {
+        console.error("Auth check error:", error);
+        showNotification("Authentication error!", 'error');
+    }
+});
+
+// Setup realtime listeners
+function setupRealtimeListeners() {
+    // Listen for new withdraw requests
+    const withdrawQuery = query(collection(db, 'withdrawRequests'), orderBy('createdAt', 'desc'));
+    
+    onSnapshot(withdrawQuery, (snapshot) => {
+        refreshWithdrawals();
+        updateWithdrawStats();
+    });
+}
+
+// Load all withdrawals from withdrawRequests collection
+async function loadAllWithdrawals() {
+    const tbody = document.getElementById('withdrawTableBody');
+    
+    try {
+        const querySnapshot = await getDocs(query(
+            collection(db, 'withdrawRequests'), 
+            orderBy('createdAt', 'desc')
+        ));
+        
+        allWithdrawals = [];
+        
+        // Get user details for each withdrawal
+        for (const docSnap of querySnapshot.docs) {
+            const data = docSnap.data();
+            const userData = await getUserData(data.uid);
+            
+            allWithdrawals.push({
+                id: docSnap.id,
+                ...data,
+                userEmail: userData?.email || 'N/A',
+                userPhone: userData?.phone || 'N/A',
+                source: 'withdrawRequests'
+            });
+        }
+        
+        displayAllWithdrawals();
+        updateWithdrawStats();
+        
+    } catch (error) {
+        console.error("Load withdrawals error:", error);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;padding:20px;">Error loading withdrawals</td></tr>';
+    }
+}
+
+// Load pending withdrawals from user history
+async function loadPendingFromUserHistory() {
+    try {
+        // Get all users
+        const usersQuery = query(collection(db, 'users'));
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        pendingWithdrawalsFromHistory = [];
+        
+        // Check each user's withdrawHistory
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const userId = userDoc.id;
+            
+            if (userData.withdrawHistory && Array.isArray(userData.withdrawHistory)) {
+                // Filter only pending status
+                userData.withdrawHistory.forEach((item, index) => {
+                    if (item.status === 'pending') {
+                        pendingWithdrawalsFromHistory.push({
+                            id: item.requestId || `hist-${userId}-${index}`,
+                            uid: userId,
+                            userEmail: userData.email || 'N/A',
+                            userPhone: userData.phone || 'N/A',
+                            amount: item.amount || 0,
+                            method: item.method || 'Unknown',
+                            phone: item.phone || userData.phone || 'N/A',
+                            status: 'pending',
+                            createdAt: item.createdAt ? 
+                                (item.createdAt.toDate ? item.createdAt : Timestamp.fromDate(new Date(item.createdAt))) : 
+                                Timestamp.now(),
+                            source: 'userHistory',
+                            historyIndex: index,
+                            userData: userData
+                        });
+                    }
+                });
+            }
+        }
+        
+        console.log('Pending from history:', pendingWithdrawalsFromHistory);
+        displayAllWithdrawals();
+        updateWithdrawStats();
+        
+    } catch (error) {
+        console.error("Load pending from history error:", error);
+        showNotification("Error loading pending from user history", 'error');
+    }
+}
+
+// Get user data
+async function getUserData(uid) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        return userDoc.exists() ? userDoc.data() : null;
+    } catch (error) {
+        console.error("Get user data error:", error);
+        return null;
+    }
+}
+
+// Update withdrawal statistics
+function updateWithdrawStats() {
+    const totalFromRequests = allWithdrawals.length;
+    const pendingFromHistory = pendingWithdrawalsFromHistory.length;
+    
+    const total = totalFromRequests + pendingFromHistory;
+    const pending = allWithdrawals.filter(w => w.status === 'pending').length + pendingFromHistory;
+    const approved = allWithdrawals.filter(w => w.status === 'approved').length;
+    const rejected = allWithdrawals.filter(w => w.status === 'rejected').length;
+    
+    document.getElementById('totalWithdrawals').textContent = total;
+    document.getElementById('pendingWithdrawals').textContent = pending;
+    document.getElementById('approvedWithdrawals').textContent = approved;
+    document.getElementById('rejectedWithdrawals').textContent = rejected;
+}
+
+// Display all withdrawals (combined)
+function displayAllWithdrawals() {
+    const tbody = document.getElementById('withdrawTableBody');
+    
+    // Combine both sources
+    const allDisplayItems = [
+        ...allWithdrawals.map(item => ({...item, isFromHistory: false})),
+        ...pendingWithdrawalsFromHistory.map(item => ({...item, isFromHistory: true}))
+    ];
+    
+    // Sort by date (newest first)
+    allDisplayItems.sort((a, b) => {
+        const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+        const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+        return dateB - dateA;
+    });
+    
+    // Apply filters
+    let filtered = applyFilters(allDisplayItems);
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;">No withdrawals found</td></tr>';
+        return;
+    }
+    
+    let rows = '';
+    filtered.forEach(withdraw => {
+        const date = withdraw.createdAt && withdraw.createdAt.toDate 
+            ? withdraw.createdAt.toDate().toLocaleString() 
+            : 'N/A';
+        
+        const statusClass = `status-${withdraw.status}`;
+        const statusText = withdraw.status.charAt(0).toUpperCase() + withdraw.status.slice(1);
+        
+        const sourceText = withdraw.isFromHistory ? 'User History' : 'Withdraw Request';
+        const sourceBadge = withdraw.isFromHistory ? 
+            '<span style="background:#8b5cf6;color:white;padding:2px 6px;border-radius:3px;font-size:11px;">H</span>' : 
+            '<span style="background:#3b82f6;color:white;padding:2px 6px;border-radius:3px;font-size:11px;">R</span>';
+        
+        rows += `
+            <tr>
+                <td>${date}</td>
+                <td>${withdraw.userEmail}</td>
+                <td>${withdraw.phone}</td>
+                <td>${withdraw.method}</td>
+                <td>৳${withdraw.amount}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>${sourceBadge} ${sourceText}</td>
+                <td>
+                    <button class="btn btn-view" onclick="viewWithdrawDetails('${withdraw.id}', ${withdraw.isFromHistory})">View</button>
+                    ${withdraw.status === 'pending' ? `
+                        <button class="btn btn-approve" onclick="approveWithdraw('${withdraw.id}', ${withdraw.isFromHistory}, '${withdraw.uid}', ${withdraw.historyIndex || 0})">Approve</button>
+                        <button class="btn btn-reject" onclick="rejectWithdraw('${withdraw.id}', ${withdraw.isFromHistory}, '${withdraw.uid}', ${withdraw.historyIndex || 0})">Reject</button>
+                    ` : ''}
+                    ${withdraw.status === 'rejected' && !withdraw.refunded && !withdraw.isFromHistory ? `
+                        <button class="btn btn-refund" onclick="processRefund('${withdraw.id}')">Refund</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = rows;
+}
+
+// Apply filters
+function applyFilters(items) {
+    let filtered = [...items];
+    const status = currentFilters.status;
+    const method = currentFilters.method;
+    const dateFrom = currentFilters.dateFrom;
+    const dateTo = currentFilters.dateTo;
+    
+    // Status filter
+    if (status !== 'all') {
+        filtered = filtered.filter(w => w.status === status);
+    }
+    
+    // Method filter
+    if (method !== 'all') {
+        filtered = filtered.filter(w => w.method === method);
+    }
+    
+    // Date filter
+    if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filtered = filtered.filter(w => {
+            if (!w.createdAt) return false;
+            const itemDate = w.createdAt.toDate ? w.createdAt.toDate() : new Date(w.createdAt);
+            return itemDate >= fromDate;
+        });
+    }
+    
+    if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filtered = filtered.filter(w => {
+            if (!w.createdAt) return false;
+            const itemDate = w.createdAt.toDate ? w.createdAt.toDate() : new Date(w.createdAt);
+            return itemDate <= toDate;
+        });
+    }
+    
+    return filtered;
+}
+
+// View withdraw details
+async function viewWithdrawDetails(withdrawId, isFromHistory = false) {
+    try {
+        let data, userData;
+        
+        if (isFromHistory) {
+            // Find in pendingFromHistory array
+            const found = pendingWithdrawalsFromHistory.find(item => item.id === withdrawId);
+            if (!found) {
+                showNotification("Withdraw not found!", 'error');
+                return;
+            }
+            data = found;
+            userData = data.userData || await getUserData(data.uid);
+        } else {
+            // Get from withdrawRequests collection
+            const withdrawDoc = await getDoc(doc(db, 'withdrawRequests', withdrawId));
+            if (!withdrawDoc.exists()) {
+                showNotification("Withdraw not found!", 'error');
+                return;
+            }
+            data = withdrawDoc.data();
+            userData = await getUserData(data.uid);
+        }
+        
+        const details = `
+            <div style="display: grid; gap: 15px;">
+                <div>
+                    <strong>Withdraw ID:</strong> ${withdrawId}
+                </div>
+                <div>
+                    <strong>Source:</strong> ${isFromHistory ? 'User History' : 'Withdraw Request'}
+                </div>
+                <div>
+                    <strong>User:</strong> ${userData?.email || 'N/A'}
+                </div>
+                <div>
+                    <strong>Phone:</strong> ${data.phone}
+                </div>
+                <div>
+                    <strong>Method:</strong> ${data.method}
+                </div>
+                <div>
+                    <strong>Amount:</strong> ৳${data.amount}
+                </div>
+                <div>
+                    <strong>Status:</strong> ${data.status}
+                </div>
+                <div>
+                    <strong>Request Date:</strong> ${data.createdAt && data.createdAt.toDate ? data.createdAt.toDate().toLocaleString() : 'N/A'}
+                </div>
+                ${data.refundedAt ? `
+                    <div>
+                        <strong>Refund Date:</strong> ${data.refundedAt.toDate().toLocaleString()}
+                    </div>
+                ` : ''}
+                ${data.approvedAt ? `
+                    <div>
+                        <strong>Approved Date:</strong> ${data.approvedAt.toDate().toLocaleString()}
+                    </div>
+                ` : ''}
+                ${data.rejectedAt ? `
+                    <div>
+                        <strong>Rejected Date:</strong> ${data.rejectedAt.toDate().toLocaleString()}
+                    </div>
+                ` : ''}
+                ${data.adminNote ? `
+                    <div>
+                        <strong>Admin Note:</strong> ${data.adminNote}
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                <h4>User Details:</h4>
+                <div>Email: ${userData?.email || 'N/A'}</div>
+                <div>Phone: ${userData?.phone || 'N/A'}</div>
+                <div>Balance: ৳${userData?.balance || 0}</div>
+                <div>Total Withdraw: ৳${userData?.totalWithdraw || 0}</div>
+                <div style="margin-top: 10px;">
+                    <button onclick="checkUserWithdrawHistory('${data.uid}')" 
+                            style="background: #8b5cf6; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
+                        Check User Withdraw History
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('modalTitle').textContent = 'Withdraw Details';
+        document.getElementById('modalBody').innerHTML = details;
+        document.getElementById('withdrawModal').style.display = 'block';
+        
+    } catch (error) {
+        console.error("View details error:", error);
+        showNotification("Error loading details!", 'error');
+    }
+}
+
+// Approve withdraw (for both sources)
+async function approveWithdraw(withdrawId, isFromHistory, userId, historyIndex) {
+    if (!confirm("Are you sure you want to approve this withdrawal?")) return;
+    
+    try {
+        if (isFromHistory) {
+            // Approve from user history
+            const userRef = doc(db, 'users', userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (!userDoc.exists()) {
+                showNotification("User not found!", 'error');
+                return;
+            }
+            
+            const userData = userDoc.data();
+            const withdrawHistory = [...(userData.withdrawHistory || [])];
+            
+            // Update the specific history item
+            if (withdrawHistory[historyIndex]) {
+                withdrawHistory[historyIndex] = {
+                    ...withdrawHistory[historyIndex],
+                    status: 'approved',
+                    approvedAt: Date.now(),
+                    approvedBy: currentUser.uid
+                };
+                
+                await updateDoc(userRef, {
+                    withdrawHistory: withdrawHistory,
+                    totalWithdraw: (userData.totalWithdraw || 0) + Number(withdrawHistory[historyIndex].amount || 0),
+                    updatedAt: Timestamp.now()
+                });
+                
+                showNotification("✅ Withdrawal approved from user history!");
+            }
+            
+        } else {
+            // Approve from withdrawRequests collection
+            const withdrawRef = doc(db, 'withdrawRequests', withdrawId);
+            
+            await updateDoc(withdrawRef, {
+                status: 'approved',
+                approvedAt: Timestamp.now(),
+                approvedBy: currentUser.uid,
+                updatedAt: Timestamp.now()
+            });
+            
+            // Also update user's withdrawHistory
+            const withdrawDoc = await getDoc(withdrawRef);
+            const data = withdrawDoc.data();
+            
+            const userRef = doc(db, 'users', data.uid);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const withdrawHistory = userData.withdrawHistory || [];
+                
+                const updatedHistory = withdrawHistory.map(entry => {
+                    if (entry.requestId === withdrawId) {
+                        return { 
+                            ...entry, 
+                            status: 'approved',
+                            approvedAt: Date.now()
+                        };
+                    }
+                    return entry;
+                });
+                
+                await updateDoc(userRef, {
+                    withdrawHistory: updatedHistory,
+                    totalWithdraw: (userData.totalWithdraw || 0) + Number(data.amount),
+                    updatedAt: Timestamp.now()
+                });
+            }
+            
+            showNotification("✅ Withdrawal approved successfully!");
+        }
+        
+        // Refresh data
+        await refreshWithdrawals();
+        
+    } catch (error) {
+        console.error("Approve error:", error);
+        showNotification("❌ Approval failed: " + error.message, 'error');
+    }
+}
+
+// Reject withdraw (for both sources)
+async function rejectWithdraw(withdrawId, isFromHistory, userId, historyIndex) {
+    const note = prompt("Please enter rejection reason:");
+    if (note === null) return;
+    
+    try {
+        if (isFromHistory) {
+            // Reject from user history and refund to balance
+            const userRef = doc(db, 'users', userId);
+            const userDoc = await getDoc(userRef);
+            
+            if (!userDoc.exists()) {
+                showNotification("User not found!", 'error');
+                return;
+            }
+            
+            const userData = userDoc.data();
+            const withdrawHistory = [...(userData.withdrawHistory || [])];
+            
+            if (withdrawHistory[historyIndex]) {
+                const amount = Number(withdrawHistory[historyIndex].amount || 0);
+                const currentBalance = Number(userData.balance || 0);
+                const newBalance = +(currentBalance + amount).toFixed(2);
+                
+                // Update history item
+                withdrawHistory[historyIndex] = {
+                    ...withdrawHistory[historyIndex],
+                    status: 'refunded',
+                    refundedAt: Date.now(),
+                    note: note || 'Admin rejected and refunded'
+                };
+                
+                // Update user document
+                await updateDoc(userRef, {
+                    balance: newBalance,
+                    withdrawHistory: withdrawHistory,
+                    updatedAt: Timestamp.now()
+                });
+                
+                showNotification(`✅ Withdrawal rejected! ৳${amount} refunded to user balance.`);
+            }
+            
+        } else {
+            // Reject from withdrawRequests collection
+            const withdrawRef = doc(db, 'withdrawRequests', withdrawId);
+            const withdrawDoc = await getDoc(withdrawRef);
+            const data = withdrawDoc.data();
+            
+            if (!data) {
+                showNotification("Withdraw data not found!", 'error');
+                return;
+            }
+            
+            // Get user data
+            const userRef = doc(db, 'users', data.uid);
+            const userDoc = await getDoc(userRef);
+            
+            if (!userDoc.exists()) {
+                showNotification("User not found!", 'error');
+                return;
+            }
+            
+            const userData = userDoc.data();
+            const currentBalance = Number(userData.balance || 0);
+            const refundAmount = Number(data.amount);
+            
+            if (isNaN(refundAmount) || refundAmount <= 0) {
+                showNotification("Invalid withdrawal amount!", 'error');
+                return;
+            }
+            
+            // Calculate new balance
+            const newBalance = +(currentBalance + refundAmount).toFixed(2);
+            
+            // Update withdraw request
+            await updateDoc(withdrawRef, {
+                status: 'rejected',
+                refunded: true,
+                rejectedAt: Timestamp.now(),
+                rejectedBy: currentUser.uid,
+                adminNote: note,
+                refundedAt: Timestamp.now(),
+                updatedAt: Timestamp.now()
+            });
+            
+            // Update user's withdrawHistory
+            const withdrawHistory = userData.withdrawHistory || [];
+            
+            const updatedHistory = withdrawHistory.map(entry => {
+                if (entry.requestId === withdrawId) {
+                    return { 
+                        ...entry, 
+                        status: 'refunded',
+                        refundedAt: Date.now(),
+                        note: note || 'Admin rejected and refunded'
+                    };
+                }
+                return entry;
+            });
+            
+            // Update user document
+            await updateDoc(userRef, {
+                balance: newBalance,
+                withdrawHistory: updatedHistory,
+                updatedAt: Timestamp.now()
+            });
+            
+            showNotification(`✅ Withdrawal rejected! ৳${refundAmount} refunded to user balance.`);
+        }
+        
+        // Refresh data
+        await refreshWithdrawals();
+        
+    } catch (error) {
+        console.error("Reject error:", error);
+        showNotification("❌ Rejection failed: " + error.message, 'error');
+    }
+}
+
+// Process refund manually (only for withdrawRequests)
+async function processRefund(withdrawId) {
+    if (!confirm("Are you sure you want to process refund?")) return;
+    
+    try {
+        const withdrawRef = doc(db, 'withdrawRequests', withdrawId);
+        const withdrawDoc = await getDoc(withdrawRef);
+        const data = withdrawDoc.data();
+        
+        const userRef = doc(db, 'users', data.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+            showNotification("User not found!", 'error');
+            return;
+        }
+        
+        // Calculate new balance
+        const currentBalance = Number(userDoc.data().balance || 0);
+        const newBalance = currentBalance + Number(data.amount);
+        
+        // Update user balance
+        await updateDoc(userRef, {
+            balance: newBalance,
+            updatedAt: Timestamp.now()
+        });
+        
+        // Update withdraw request
+        await updateDoc(withdrawRef, {
+            refunded: true,
+            refundedAt: Timestamp.now(),
+            updatedAt: Timestamp.now()
+        });
+        
+        // Update user's withdrawHistory
+        const userData = userDoc.data();
+        const withdrawHistory = userData.withdrawHistory || [];
+        
+        const updatedHistory = withdrawHistory.map(entry => {
+            if (entry.requestId === withdrawId) {
+                return { 
+                    ...entry, 
+                    status: 'refunded',
+                    refundedAt: Date.now()
+                };
+            }
+            return entry;
+        });
+        
+        await updateDoc(userRef, {
+            withdrawHistory: updatedHistory
+        });
+        
+        showNotification("✅ Refund processed successfully!");
+        await refreshWithdrawals();
+        
+    } catch (error) {
+        console.error("Refund error:", error);
+        showNotification("❌ Refund failed: " + error.message, 'error');
+    }
+}
+
+// Filter withdrawals
+function filterWithdrawals() {
+    currentFilters.status = document.getElementById('statusFilter').value;
+    currentFilters.method = document.getElementById('methodFilter').value;
+    currentFilters.dateFrom = document.getElementById('dateFrom').value;
+    currentFilters.dateTo = document.getElementById('dateTo').value;
+    
+    displayAllWithdrawals();
+}
+
+// Reset filters
+function resetFilters() {
+    document.getElementById('statusFilter').value = 'all';
+    document.getElementById('methodFilter').value = 'all';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    
+    currentFilters = {
+        status: 'all',
+        method: 'all',
+        dateFrom: null,
+        dateTo: null
+    };
+    
+    displayAllWithdrawals();
+}
+
+// Refresh withdrawals
+async function refreshWithdrawals() {
+    await loadAllWithdrawals();
+    await loadPendingFromUserHistory();
+    showNotification("Withdrawals refreshed!", 'info');
+}
+
+// Tab switching
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    
+    // Activate selected tab button
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.textContent.includes(tabName.charAt(0).toUpperCase() + tabName.slice(1))) {
+            btn.classList.add('active');
+        }
+    });
+}
+
+// Close modal
+function closeModal() {
+    document.getElementById('withdrawModal').style.display = 'none';
+}
+
+// Check user withdraw history for duplicates
+async function checkUserWithdrawHistory(userId) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) {
+            showNotification("User not found!", 'error');
+            return;
+        }
+        
+        const userData = userDoc.data();
+        const history = userData.withdrawHistory || [];
+        
+        // Check for duplicates
+        const duplicates = findDuplicateWithdrawals(history);
+        
+        if (duplicates.length > 0) {
+            alert(`Found ${duplicates.length} duplicate withdrawals in user history.\n\nDuplicate request IDs: ${duplicates.map(d => d.requestId).join(', ')}`);
+        } else {
+            alert("No duplicate withdrawals found in user history.");
+        }
+        
+        console.log("User withdraw history:", history);
+        
+    } catch (error) {
+        console.error("Check history error:", error);
+        showNotification("Error checking user history!", 'error');
+    }
+}
+
+// Find duplicate withdrawals
+function findDuplicateWithdrawals(history) {
+    const requestIds = {};
+    const duplicates = [];
+    
+    history.forEach((entry, index) => {
+        if (entry.requestId) {
+            if (requestIds[entry.requestId]) {
+                duplicates.push({ index, requestId: entry.requestId });
+            } else {
+                requestIds[entry.requestId] = true;
+            }
+        }
+    });
+    
+    return duplicates;
+}
+
+// Cleanup duplicate withdrawals
+async function cleanupDuplicateWithdrawals() {
+    if (!confirm("This will clean up duplicate withdrawals in ALL users' history. Continue?")) return;
+    
+    try {
+        const usersQuery = query(collection(db, 'users'));
+        const usersSnapshot = await getDocs(usersQuery);
+        let totalRemoved = 0;
+        
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const history = userData.withdrawHistory || [];
+            
+            if (history.length === 0) continue;
+            
+            // Remove duplicates
+            const uniqueHistory = [];
+            const seenRequestIds = new Set();
+            
+            for (const entry of history) {
+                if (entry.requestId && !seenRequestIds.has(entry.requestId)) {
+                    seenRequestIds.add(entry.requestId);
+                    uniqueHistory.push(entry);
+                }
+            }
+            
+            // Update if duplicates were found
+            if (uniqueHistory.length !== history.length) {
+                const removedCount = history.length - uniqueHistory.length;
+                totalRemoved += removedCount;
+                
+                await updateDoc(doc(db, 'users', userDoc.id), {
+                    withdrawHistory: uniqueHistory,
+                    updatedAt: Timestamp.now()
+                });
+                
+                console.log(`Cleaned up ${userDoc.id}: removed ${removedCount} duplicates`);
+            }
+        }
+        
+        showNotification(`Cleaned up ${totalRemoved} duplicate withdrawals from all users!`, 'success');
+        await refreshWithdrawals();
+        
+    } catch (error) {
+        console.error("Cleanup error:", error);
+        showNotification("Cleanup failed: " + error.message, 'error');
+    }
+}
+
+// Make functions globally available
+window.viewWithdrawDetails = viewWithdrawDetails;
+window.approveWithdraw = approveWithdraw;
+window.rejectWithdraw = rejectWithdraw;
+window.processRefund = processRefund;
+window.filterWithdrawals = filterWithdrawals;
+window.resetFilters = resetFilters;
+window.refreshWithdrawals = refreshWithdrawals;
+window.showTab = showTab;
+window.closeModal = closeModal;
+window.checkUserWithdrawHistory = checkUserWithdrawHistory;
+window.cleanupDuplicateWithdrawals = cleanupDuplicateWithdrawals;
+
+</script>
+</body>
+</html>
